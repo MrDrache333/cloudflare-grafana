@@ -16,23 +16,27 @@
 ##      https://jorgedelacruz.es/
 ##      https://jorgedelacruz.uk/
 
-##
-# Configurations
-##
+# Load Env
+source /etc/environment
+
+
 # Endpoint URL for InfluxDB
-InfluxDBURL="YOURINFLUXSERVERIP" #Your InfluxDB Server, http://FQDN or https://FQDN if using SSL
-InfluxDBPort="8086" #Default Port
-InfluxDB="telegraf" #Default Database
-InfluxDBUser="USER" #User for Database
-InfluxDBPassword="PASSWORD" #Password for Database
+InfluxDBURL="${InfluxDBURL:-http://influxdb}" # Default fallback
+InfluxDBPort="${InfluxDBPort:-8086}"
+InfluxDB="${InfluxDB:-telegraf}"
+InfluxDBUser="${InfluxDBUser:-telegraf}"
+InfluxDBPassword="${InfluxDBPassword:-telegraf}"
 
 # Endpoint URL for login action
-cloudflareapikey="YOURAPIKEY"
-cloudflarezone="YOURZONEID"
-cloudflareemail="YOUREMAIL"
+cloudflareauthmethod="${AUTH_METHOD:-TOKEN}" # Auth method 'TOKEN' or 'APIKEY'
+cloudflareapikey="${AUTH_APIKEY:-YOURAPIKEY}" # When using APIKEY as authmethod, provide the apikey
+cloudflareemail="${AUTH_MAIL:-YOUREMAIL}" # When using APIKEY as authmethod, provide the auth email
+cloudflareapitoken="${AUTH_TOKEN:-YOURAUTHTOKEN}" # When using TOKEN as authmethod, provide the auth TOKEN
+cloudflarezone="${ZONE_ID:-YOURZONEID}"
+
 
 # Time variables
-back_seconds=60*60*24*7  # 24 hours
+back_seconds="${QUERY_TIME:-3600*24}"
 end_epoch=$(date +'%s')
 let start_epoch=$end_epoch-$back_seconds
 start_date=$(date --date="@$start_epoch" +'%Y-%m-%d')
@@ -105,8 +109,23 @@ PAYLOAD="$PAYLOAD
 ##
 # Cloudflare Analytics. This part will check on your Cloudflare Analytics, extracting the data from the last 24 hours
 ##
+## URL with API email and key
+echo "Auth-method: $cloudflareauthmethod"
+echo "Auth-Token: $cloudflareapitoken"
+case $cloudflareauthmethod in
+        APIKEY)
 cloudflareUrl=$(curl -s -X POST -H "Content-Type: application/json" -H "X-Auth-Email: $cloudflareemail" -H  "X-Auth-Key: $cloudflareapikey" --data "$(echo $PAYLOAD)" https://api.cloudflare.com/client/v4/graphql/ 2>&1 -k --silent)
+;;
+## URL with API Token
+        TOKEN)
+cloudflareUrl=$(curl -s -X POST -H "Content-Type: application/json" -H "Authorization: Bearer $cloudflareapitoken" --data "$(echo $PAYLOAD)" https://api.cloudflare.com/client/v4/graphql/ 2>&1 -k --silent)
+;;
+        *)
+        echo "No or Wrong Input in Config for 'cloudflareauthmethod'. Current value is $cloudflareauthmethod"
+;;
+esac
 
+echo "Endpoint: $cloudflareUrl"
     declare -i arraydays=0
     for requests in $(echo "$cloudflareUrl" | jq -r '.data.viewer.zones[0].httpRequests1dGroups[].sum.requests'); do
         ## Requests
@@ -153,8 +172,8 @@ cloudflareUrl=$(curl -s -X POST -H "Content-Type: application/json" -H "X-Auth-E
             echo "Writing stats for day $date"
             #echo "cloudflare_analytics_country,country=$cfRequestsCC visits=$cfRequests $cfTimeStamp"
 
-            echo "Writing Zone data per Country to InfluxDB cloudflare_analytics_country"
-            curl -i -XPOST "$InfluxDBURL:$InfluxDBPort/write?precision=s&db=$InfluxDB" -u "$InfluxDBUser:$InfluxDBPassword" --data-binary "cloudflare_analytics_country,country=$cfRequestsCC visits=$cfRequests $cfTimeStamp"
+            echo "Writing Zone data per Country to InfluxDB cloudflare_analytics_country to endpoint $InfluxDBURL:$InfluxDBPort/write?precision=s&db=$InfluxDB"
+            curl -i "$InfluxDBURL:$InfluxDBPort/write?precision=s&db=$InfluxDB" -u "$InfluxDBUser:$InfluxDBPassword" --data-binary "cloudflare_analytics_country,country=$cfRequestsCC visits=$cfRequests $cfTimeStamp"
 
             arraycountry=$arraycountry+1
             fi

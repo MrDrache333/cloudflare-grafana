@@ -1,0 +1,40 @@
+version: "3.8"
+services:
+  cloudflare-scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      InfluxDBURL: "http://cs_influxdb" # Intern innerhalb des Netzwerks auf den Dienst "influxdb" zugreifen
+      InfluxDBPort: "8086"
+      InfluxDB: "telegraf"
+      InfluxDBUser: "telegraf"
+      InfluxDBPassword: "telegraf"
+      AUTH_METHOD: "TOKEN"
+      AUTH_APIKEY: "your_cloudflare_api_key"
+      ZONE_ID: "your_cloudflare_zone_id"
+      AUTH_MAIL: "your_email"
+      QUERY_TIME: 3600 # Time in seconds the query should look back in time
+    depends_on:
+      - influxdb # Sicherstellen, dass die InfluxDB bereit ist
+    restart: always
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 1h
+
+  influxdb:
+    image: influxdb:1.8
+    container_name: cs_influxdb
+    environment:
+      INFLUXDB_DB: "telegraf" # Standard-Datenbank
+      INFLUXDB_ADMIN_USER: "admin"
+      INFLUXDB_ADMIN_PASSWORD: "admin"
+      INFLUXDB_USER: "telegraf"
+      INFLUXDB_USER_PASSWORD: "telegraf"
+    volumes:
+      - cs_influxdb_data:/var/lib/influxdb # Datenvolumen für Persistenz
+    restart: always
+
+volumes:
+  cs_influxdb_data: # Persistente Speicherung der Daten von InfluxDB
