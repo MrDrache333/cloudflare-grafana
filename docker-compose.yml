@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      InfluxDBURL: "http://cs_influxdb" # Intern innerhalb des Netzwerks auf den Dienst "influxdb" zugreifen
+      InfluxDBURL: "http://cs_influxdb"
       InfluxDBPort: "8086"
       InfluxDB: "telegraf"
       InfluxDBUser: "telegraf"
@@ -14,14 +14,10 @@ services:
       AUTH_APIKEY: "your_cloudflare_api_key"
       ZONE_ID: "your_cloudflare_zone_id"
       AUTH_MAIL: "your_email"
-      QUERY_TIME: 3600 # Time in seconds the query should look back in time
+      QUERY_TIME: 3600 # Time in seconds the query should look back in time. 604800 would be 7 days and the max value for the free api
     depends_on:
       - influxdb # Sicherstellen, dass die InfluxDB bereit ist
     restart: always
-    deploy:
-      restart_policy:
-        condition: any
-        delay: 1h
 
   influxdb:
     image: influxdb:1.8

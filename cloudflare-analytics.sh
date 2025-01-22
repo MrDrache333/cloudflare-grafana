@@ -8,17 +8,9 @@
 ##
 ##      .Notes
 ##      NAME:  cloudflare-analytics.sh
-##      LASTEDIT: 19/03/2021
-##      VERSION: 2.0
+##      LASTEDIT: 01-2025
+##      VERSION: 2.1
 ##      KEYWORDS: Cloudflare, InfluxDB, Grafana
-   
-##      .Link
-##      https://jorgedelacruz.es/
-##      https://jorgedelacruz.uk/
-
-# Load Env
-source /etc/environment
-
 
 # Endpoint URL for InfluxDB
 InfluxDBURL="${InfluxDBURL:-http://influxdb}" # Default fallback
@@ -182,3 +174,4 @@ echo "Endpoint: $cloudflareUrl"
         arraydays=$arraydays+1
         fi
     done  
+sleep $back_seconds
